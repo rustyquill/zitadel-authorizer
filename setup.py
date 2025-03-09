@@ -5,15 +5,13 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
-        "pydantic==2.10.6",
-        "PyJWT==2.10.1",
+        "pydantic>=2.10.6",
+        "PyJWT>=2.10.1",
         "cryptography",
-        "aws-lambda-powertools==3.6.0",
+        "aws-lambda-powertools>=3.6.0",
     ],
     extras_require={
-        "dev": [
-            "pytest",
-        ],
+        "dev": ["pytest", "testcontainers"],
     },
     classifiers=[
         "Programming Language :: Python :: 3",
