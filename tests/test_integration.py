@@ -3,10 +3,10 @@ import os
 from testcontainers.compose import DockerCompose
 import requests
 import time
-from tests.fixtures.zitadel import ZitadelE2e
+from tests.fixtures.zitadel import ZitadelIntegration
 
 compose = DockerCompose(context=".", compose_file_name="docker-compose.yaml")
-zitadel = ZitadelE2e()
+zitadel = ZitadelIntegration()
 
 
 @pytest.fixture(scope="module", autouse=True)

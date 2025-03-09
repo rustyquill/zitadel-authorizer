@@ -3,7 +3,7 @@ import requests
 import time
 
 
-class ZitadelE2e:
+class ZitadelIntegration:
     base_url: str = "http://localhost:8080/management/v1"
     pat: str
     session: requests.Session
