@@ -11,7 +11,7 @@ def test_authorizer_from_apigateway_event(
         authorizer = Authorizer.from_api_gateway_event(event_without_authorization)
 
     authorizer = Authorizer.from_api_gateway_event(event_with_token)
-    assert authorizer.token == opaque_token
+    assert authorizer.bearer_token == opaque_token
 
 
 def test_authorizer_is_jwt_token(opaque_token, jwt_token):

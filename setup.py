@@ -9,9 +9,10 @@ setup(
         "PyJWT>=2.10.1",
         "cryptography",
         "aws-lambda-powertools>=3.6.0",
+        "requests>=2.32.3",
     ],
     extras_require={
-        "dev": ["pytest", "testcontainers"],
+        "dev": ["pytest", "testcontainers", "moto[ssm]"],
     },
     classifiers=[
         "Programming Language :: Python :: 3",

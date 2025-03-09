@@ -14,14 +14,14 @@ class Authorizer:
     Authorizer class to handle the authorizer logic
     """
 
-    token: str
+    bearer_token: str
 
     def __init__(self, token: str):
         """
         Initialize the Authorizer object
         """
 
-        self.token = token
+        self.bearer_token = token
 
     @classmethod
     def from_api_gateway_event(cls, event: APIGatewayAuthorizerEventV2):
@@ -42,7 +42,7 @@ class Authorizer:
         Check if the token is a JWT token, simply checks if token starts with ey
         """
 
-        if not self.token.startswith("ey"):
+        if not self.bearer_token.startswith("ey"):
             return False
 
         return True
@@ -56,22 +56,3 @@ class Authorizer:
             return False
 
         return True
-
-
-# # Import necessary libraries
-# from pydantic import BaseModel
-# import jwt
-# from cryptography.hazmat.primitives import serialization
-# from aws_lambda_powertools import Logger
-
-# logger = Logger()
-
-
-# class Authorizer(BaseModel):
-#     # Define your model here
-#     pass
-
-
-# def main():
-#     # Main function for the authorizer
-#     pass
