@@ -1,4 +1,5 @@
 import logging
+import pytest
 
 
 def test_authorizer_from_apigateway_event(
@@ -6,10 +7,8 @@ def test_authorizer_from_apigateway_event(
 ):
     from zitadel_authorizer.authorizer import Authorizer
 
-    with caplog.at_level(logging.WARNING):
+    with pytest.raises(ValueError, match="No Authorization header found") as e:
         authorizer = Authorizer.from_api_gateway_event(event_without_authorization)
-        assert authorizer.token is None
-        assert "No Authorization header found" in caplog.text
 
     authorizer = Authorizer.from_api_gateway_event(event_with_token)
     assert authorizer.token == opaque_token
