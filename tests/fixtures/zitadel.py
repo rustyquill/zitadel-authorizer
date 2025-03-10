@@ -150,17 +150,19 @@ class ZitadelIntegration:
             r.raise_for_status()
         return r.json()
 
-    def login_user(self, username: str, password: str, client_id: str):
-        # first call the authorize endpoint, this redirects to the login page
-        # dont follow the redirect to collect the request id and the zitadel user agent cookie
-        login_session = requests.Session()
-        # # fake user agent
-        # login_session.headers.update(
-        #     {
-        #         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-        #     }
-        # )
-        code_verifier, code_challenge = pkce.generate_pkce_pair()
+    def _get_gorilla_csrf_token(self, html: str):
+        """parses the html output for the csrf token"""
+
+        # parse the login page for the gorilla crsf token
+        # <input type="hidden" name="gorilla.csrf.Token" value="d7vfg2exNvgkdP/pDCHXX4RXAaKIyn0SLChublQfU6SQC2TZ5vMD5R2S6SHPlD2o1gfIGlqo8xLKjdnUjELrJA==">
+        for line in html.split("\n"):
+            if "gorilla.csrf.Token" in line:
+                return line.split('value="')[1].split('"')[0]
+
+        return None
+
+    def _authorize(self, client_id: str, code_challenge: str):
+        """call the authorize endpoint and return the reuest id and the zitadel user agent cookie and the next login url"""
 
         r = requests.get(
             url=f"{self.base_url}/oauth/v2/authorize",
@@ -180,10 +182,16 @@ class ZitadelIntegration:
         # lets extract id before following the link
         request_id = r.headers["Location"].split("authRequestID=")[1]
         zitadel_user_agent = r.cookies.get_dict().get("zitadel.useragent")
+        login_url = f"{self.base_url}{r.headers['Location']}"
+
+        return request_id, zitadel_user_agent, login_url
+
+    def _login(self, login_url: str, zitadel_user_agent: str):
+        """call the login endpoint to retrieve the zitadel login csrf token and the gorilla csrf token"""
 
         # navigate to the login page to get the crsf token and crsf cookie
         r = requests.get(
-            f"{self.base_url}{r.headers['Location']}",
+            login_url,
             allow_redirects=False,
             cookies={"zitadel.useragent": zitadel_user_agent},
         )
@@ -191,12 +199,40 @@ class ZitadelIntegration:
 
         # get the zitadel csrf cookie
         zitadel_login_csrf = r.cookies.get_dict().get("zitadel.login.csrf")
-        gorilla_csrf_token = None
-        # parse the login page for the gorilla crsf token
-        # <input type="hidden" name="gorilla.csrf.Token" value="d7vfg2exNvgkdP/pDCHXX4RXAaKIyn0SLChublQfU6SQC2TZ5vMD5R2S6SHPlD2o1gfIGlqo8xLKjdnUjELrJA==">
-        for line in r.text.split("\n"):
-            if "gorilla.csrf.Token" in line:
-                gorilla_csrf_token = line.split('value="')[1].split('"')[0]
+        gorilla_csrf_token = self._get_gorilla_csrf_token(r.text)
+
+        return zitadel_login_csrf, gorilla_csrf_token
+
+    def _authorize_redirect(
+        self, authorize_url: str, zitadel_user_agent: str, zitadel_login_csrf: str
+    ):
+        """call the authorize endpoint with the received redirect to lease the token"""
+
+        # finally call the authorize endpoint with the request id to receive the token code
+        r = requests.get(
+            url=authorize_url,
+            allow_redirects=False,
+            cookies={
+                "zitadel.useragent": zitadel_user_agent,
+                "zitadel.login.csrf": zitadel_login_csrf,
+            },
+        )
+        r.raise_for_status()
+
+        # extract tge code from the location header
+        code = r.headers["Location"].split("code=")[1]
+
+        return code
+
+    def _loginname(
+        self,
+        gorilla_csrf_token: str,
+        request_id: str,
+        username: str,
+        zitadel_user_agent: str,
+        zitadel_login_csrf: str,
+    ):
+        """call the loginname endpoint, this is required to not raise "is not human" errors"""
 
         # call the loginname endpoint with the request id and the user credentials
         r = requests.post(
@@ -212,9 +248,18 @@ class ZitadelIntegration:
                 "zitadel.login.csrf": zitadel_login_csrf,
             },
         )
-        for line in r.text.split("\n"):
-            if "gorilla.csrf.Token" in line:
-                gorilla_csrf_token = line.split('value="')[1].split('"')[0]
+        return self._get_gorilla_csrf_token(r.text)
+
+    def _password(
+        self,
+        gorilla_csrf_token: str,
+        request_id: str,
+        username: str,
+        password: str,
+        zitadel_user_agent: str,
+        zitadel_login_csrf: str,
+    ):
+        """call the password endpoint to retrieve the authorize redirect to lease the token"""
 
         # lets call the password endpoint with the request id and the user credentials
         r = requests.post(
@@ -233,22 +278,10 @@ class ZitadelIntegration:
         )
         r.raise_for_status()
 
-        # finally call the authorize endpoint with the request id to receive the token code
-        r = requests.get(
-            url=r.headers["Location"],
-            allow_redirects=False,
-            cookies={
-                "zitadel.useragent": zitadel_user_agent,
-                "zitadel.login.csrf": zitadel_login_csrf,
-            },
-        )
-        r.raise_for_status()
+        return r.headers["Location"]
 
-        # extract tge code from the location header
-        redirect_uri = r.headers["Location"]
-        code = redirect_uri.split("code=")[1]
-
-        # exchange the code for the token
+    def _token(self, code: str, client_id: str, code_verifier: str):
+        """exchange the code for the token"""
         r = requests.post(
             f"{self.base_url}/oauth/v2/token",
             data={
@@ -261,6 +294,39 @@ class ZitadelIntegration:
         )
         r.raise_for_status()
         return r.json()
+
+    def login_user(self, username: str, password: str, client_id: str):
+
+        code_verifier, code_challenge = pkce.generate_pkce_pair()
+        request_id, zitadel_user_agent, login_url = self._authorize(
+            client_id=client_id, code_challenge=code_challenge
+        )
+        zitadel_login_csrf, gorilla_csrf_token = self._login(
+            login_url=login_url, zitadel_user_agent=zitadel_user_agent
+        )
+        gorilla_csrf_token = self._loginname(
+            gorilla_csrf_token=gorilla_csrf_token,
+            request_id=request_id,
+            username=username,
+            zitadel_user_agent=zitadel_user_agent,
+            zitadel_login_csrf=zitadel_login_csrf,
+        )
+        authorize_url = self._password(
+            gorilla_csrf_token=gorilla_csrf_token,
+            request_id=request_id,
+            username=username,
+            password=password,
+            zitadel_user_agent=zitadel_user_agent,
+            zitadel_login_csrf=zitadel_login_csrf,
+        )
+        code = self._authorize_redirect(
+            authorize_url=authorize_url,
+            zitadel_user_agent=zitadel_user_agent,
+            zitadel_login_csrf=zitadel_login_csrf,
+        )
+
+        token = self._token(code=code, client_id=client_id, code_verifier=code_verifier)
+        return token
 
 
 @pytest.fixture
