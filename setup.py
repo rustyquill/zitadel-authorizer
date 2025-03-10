@@ -12,7 +12,7 @@ setup(
         "requests>=2.32.3",
     ],
     extras_require={
-        "dev": ["pytest", "testcontainers", "moto[ssm]"],
+        "dev": ["pytest", "testcontainers", "moto[ssm]", "pkce"],
     },
     classifiers=[
         "Programming Language :: Python :: 3",
