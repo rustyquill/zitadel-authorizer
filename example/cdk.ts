@@ -16,6 +16,18 @@ const stack = new cdk.Stack(app, 'ExampleHttpApiStack');
 const authorizerLambda = new lambda.Function(stack, 'AuthorizerLambda', {
     runtime: lambda.Runtime.PYTHON_3_13,
     handler: 'index.handler',
+    environment: {
+        POWERTOOLS_LOG_LEVEL: 'DEBUG',
+        POWERTOOLS_SERVICE_NAME: 'zitadel-authorizer',
+        // ISSUER_URL is your zitadel instances url
+        ISSUER_URL: process.env.ISSUER_URL || "undefined",
+        // INTROSPECTION_URL is used by the lambda to introspect the received token
+        INTROSPECTION_ENDPOINT: process.env.INTROSPECTION_ENDPOINT || "undefined",
+        // APPLICATION_KEY_ARN is used to retrieve the api private key from the parameter store
+        APPLICATION_KEY_ARN: process.env.APPLICATION_KEY_ARN || "undefined",
+    },
+    architecture: lambda.Architecture.ARM_64,
+    timeout: cdk.Duration.seconds(15),
     code: lambda.Code.fromAsset('..', {
         bundling: {
             image: lambda.Runtime.PYTHON_3_13.bundlingImage,
@@ -41,6 +53,11 @@ const authorizerLambda = new lambda.Function(stack, 'AuthorizerLambda', {
         }
     })
 });
+// allow the lambda to read the private key from the parameter store
+authorizerLambda.addToRolePolicy(new cdk.aws_iam.PolicyStatement({
+    actions: ['ssm:GetParameter'],
+    resources: [process.env.APPLICATION_KEY_ARN || "undefined"],
+}));
 
 const httpApi = new apigatewayv2.HttpApi(stack, 'HttpApi')
 const httpBinIntegration = new apigatewayv2_integrations.HttpUrlIntegration('HttpBin', 'https://httpbin.org/anything');

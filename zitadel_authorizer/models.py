@@ -5,6 +5,18 @@ from aws_lambda_powertools.utilities import parameters
 from typing import List, Optional, Dict
 from typing_extensions import Annotated
 from pydantic.functional_validators import BeforeValidator
+from pydantic_settings import BaseSettings
+from pydantic import AnyHttpUrl
+
+
+class IntrospectorSettings(BaseSettings):
+    """
+    Settings for the Introspector.
+    """
+
+    ISSUER_URL: AnyHttpUrl
+    INTROSPECTION_ENDPOINT: AnyHttpUrl
+    APPLICATION_KEY_ARN: str
 
 
 class ApplicationKey(BaseModel):

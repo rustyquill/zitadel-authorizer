@@ -9,6 +9,7 @@ setup(
         "aws-lambda-powertools>=3.6.0",
         "cryptography",
         "pydantic>=2.10.6",
+        "pydantic-settings>=2.8.1",
         "PyJWT>=2.10.1",
         "requests>=2.32.3",
     ],
