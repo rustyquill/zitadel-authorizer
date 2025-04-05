@@ -35,8 +35,8 @@ def handler(event: APIGatewayAuthorizerEventV2, context: LambdaContext):
     logger.info("Preparing introspector")
     introspector = Introspector(
         application_key=application_key,
-        issuer_url=introspection_settings.ISSUER_URL,
-        introspection_endpoint=introspection_settings.INTROSPECTION_ENDPOINT,
+        issuer_url=str(introspection_settings.ISSUER_URL),
+        introspection_endpoint=str(introspection_settings.INTROSPECTION_ENDPOINT),
     )
 
     logger.info("Getting bearer token from event")
