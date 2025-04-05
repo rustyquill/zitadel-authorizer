@@ -393,10 +393,16 @@ class ZitadelApiAppKey(BaseModel):
     key_details: str = Field(alias="keyDetails")
 
 
+class ZitadelToken(BaseModel):
+    id_token: str = "unauthorized"
+    access_token: str = "unauthorized"
+
+
 class ZitadelUser(BaseModel):
     id: str
     user_name: str = Field(alias="userName")
     password: str
+    token: ZitadelToken = Field(default_factory=ZitadelToken)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -436,8 +442,8 @@ def zitadel_compose(request):
         }
     )
 
-    print(
-        zitadel.login_user(
+    user.token = ZitadelToken(
+        **zitadel.login_user(
             username=user.user_name,
             password=user.password,
             client_id=web_app.client_id,
