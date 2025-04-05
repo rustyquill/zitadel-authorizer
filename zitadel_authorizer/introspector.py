@@ -26,7 +26,7 @@ class Introspector(IntrospectTokenValidator):
     ):
         super().__init__(*args, **kwargs)
 
-        self.application_key: ApplicationKey = application_key
+        self.application_key = application_key
         self.issuer_url = issuer_url
         self.introspection_endpoint = introspection_endpoint
 
