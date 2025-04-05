@@ -8,6 +8,12 @@ from aws_lambda_powertools.utilities.data_classes.api_gateway_authorizer_event i
 )
 
 
+# TODO: this class needs rewriting, bearer_token is retrieved by helper function
+# introspection is handled in introspector class. instead this class should receive
+# the introspected token and then use it in combination with some configuration options
+# to authorize or deny the request
+
+
 class Authorizer:
     """
     Authorizer class to handle the authorizer logic
