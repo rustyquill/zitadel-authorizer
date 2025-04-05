@@ -16,9 +16,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{base_url}}/public",
+					"raw": "{{api_base_url}}/public",
 					"host": [
-						"{{base_url}}"
+						"{{api_base_url}}"
 					],
 					"path": [
 						"public"
@@ -36,9 +36,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{base_url}}/private",
+					"raw": "{{api_base_url}}/private",
 					"host": [
-						"{{base_url}}"
+						"{{api_base_url}}"
 					],
 					"path": [
 						"private"
@@ -53,9 +53,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{base_url}}/private",
+					"raw": "{{api_base_url}}/private",
 					"host": [
-						"{{base_url}}"
+						"{{api_base_url}}"
 					],
 					"path": [
 						"private"
@@ -68,6 +68,11 @@
 	"auth": {
 		"type": "oauth2",
 		"oauth2": [
+			{
+				"key": "tokenName",
+				"value": "zitadel_authorizer_example",
+				"type": "string"
+			},
 			{
 				"key": "scope",
 				"value": "profile email openid urn:zitadel:iam:org:project:id:zitadel:aud",
@@ -91,11 +96,6 @@
 			{
 				"key": "grant_type",
 				"value": "authorization_code_with_pkce",
-				"type": "string"
-			},
-			{
-				"key": "tokenName",
-				"value": "{{token_name}}",
 				"type": "string"
 			},
 			{
@@ -134,13 +134,18 @@
 	],
 	"variable": [
 		{
-			"key": "base_url",
-			"value": "https://cghnha20c0.execute-api.eu-central-1.amazonaws.com",
+			"key": "api_base_url",
+			"value": "REPLACE WITH YOUR API BASE URL",
 			"type": "string"
 		},
 		{
 			"key": "zitadel_url",
-			"value": "",
+			"value": "https://replace-withyour-instance-id.zitadel.cloud",
+			"type": "string"
+		},
+		{
+			"key": "client_id",
+			"value": "REPLACE WITH YOUR APPS CLIENT ID",
 			"type": "string"
 		}
 	]
