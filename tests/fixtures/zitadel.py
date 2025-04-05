@@ -1,7 +1,6 @@
 import pytest
 from testcontainers.compose import DockerCompose
-from pydantic import BaseModel, Field
-from typing import Dict, List
+from typing import Dict
 from .zitadel_integration import (
     ZitadelIntegration,
     ZitadelProject,
@@ -26,11 +25,10 @@ def zitadel_compose(request):
 
     request.addfinalizer(teardown)
 
+    # wait for the container to be up
     zitadel = ZitadelIntegration()
     zitadel.load_pat()
     zitadel.test_connectivty()
-
-    # Possible values: [OIDC_TOKEN_TYPE_BEARER, ]
 
     # prepare test project with roles
     project = ZitadelProject(**zitadel.create_project(name="integration-test"))
@@ -44,7 +42,8 @@ def zitadel_compose(request):
         **zitadel.create_api_app_key(project_id=project.id, app_id=api_app.id)
     )
 
-    # create webapps with bearer (opaque) and jwt tokens
+    # initialize webapps with bearer (opaque) and jwt tokens
+    # with or without token assertions
     web_apps = dict(
         bearer=ZitadelWebapp(
             **zitadel.create_web_app(
@@ -53,7 +52,7 @@ def zitadel_compose(request):
                 access_token_type="OIDC_TOKEN_TYPE_BEARER",
             )
         ),
-        bearer_with_assertions=ZitadelWebapp(
+        web_app_bearer_with_assertions=ZitadelWebapp(
             **zitadel.create_web_app(
                 project_id=project.id,
                 name="integration-test-web-bearer-with-assertions",
@@ -63,14 +62,14 @@ def zitadel_compose(request):
                 id_token_userinfo_assertion=True,
             )
         ),
-        jwt=ZitadelWebapp(
+        web_app_jwt=ZitadelWebapp(
             **zitadel.create_web_app(
                 project_id=project.id,
                 name="integration-test-web-jwt",
                 access_token_type="OIDC_TOKEN_TYPE_JWT",
             )
         ),
-        jwt_with_assertions=ZitadelWebapp(
+        web_app_jwt_with_assertions=ZitadelWebapp(
             **zitadel.create_web_app(
                 project_id=project.id,
                 name="integration-test-web-jwt-with-assertions",
@@ -82,18 +81,83 @@ def zitadel_compose(request):
         ),
     )
 
-    # create one user without any authorizations and one user with authorizations for the
-    # test project
-    # TODO: assign authorizations
-    user = ZitadelUser(
-        **{
-            **zitadel.create_user(
-                username="integration-test-user",
-                password="integration-test-password",
-            ),
-            **{"password": "integration-test-password"},
-        }
+    # initialize three users, one without roles, one with a single role
+    # and one with two roles
+    users = dict(
+        user_no_grants=ZitadelUser(
+            **{
+                **zitadel.create_user(
+                    username="integration-test-user",
+                    password="integration-test-password",
+                ),
+                **{"password": "integration-test-password"},
+            }
+        ),
+        user_with_single_grant=ZitadelUser(
+            **{
+                **zitadel.create_user(
+                    username="integration-test-user-with-role",
+                    password="integration-test-password",
+                ),
+                **{"password": "integration-test-password"},
+            }
+        ),
+        user_with_two_grants=ZitadelUser(
+            **{
+                **zitadel.create_user(
+                    username="integration-test-user-with-two-roles",
+                    password="integration-test-password",
+                ),
+                **{"password": "integration-test-password"},
+            }
+        ),
     )
+    zitadel.add_user_grant(
+        project_id=project.id,
+        user_id=users.get("user_with_single_grant").id,
+        role_keys=["USER"],
+    )
+    zitadel.add_user_grant(
+        project_id=project.id,
+        user_id=users.get("user_with_two_grants").id,
+        role_keys=["ADMIN", "USER"],
+    )
+
+    tokens = []
+    for user_key, user_value in users.items():
+        for web_app_key, web_app_value in web_apps.items():
+            tokens.append(
+                dict(
+                    user=user_key,
+                    web_app=web_app_key,
+                    token=ZitadelToken(
+                        **zitadel.login_user(
+                            username=user_value.username,
+                            password=user_value.password,
+                            client_id=web_app_value.client_id,
+                        )
+                    ),
+                )
+            )
+            # login users to all web apps
+            # tokens[fuser_key] = ZitadelToken(
+            #     **zitadel.login_user(
+            #         username=user_value.username,
+            #         password=user_value.password,
+            #         client_id=web_app_valye.client_id,
+            #     )
+            # )
+            # print(
+            #     f"login user {user_key} to web app {web_app_key} {web_app_value.name}"
+            # )
+
+    # # login users to all web apps
+    # for user in [
+    #     user,
+    #     user_with_single_grant,
+    #     user_with_two_grants,
+    # ]:
+    # pass
 
     # TODO: store tokens
     # user.token = ZitadelToken(
@@ -112,7 +176,8 @@ def zitadel_compose(request):
             self.api_app: ZitadelApiApp = api_app
             self.api_app_key: ZitadelApiAppKey = api_app_key
             self.web_apps: Dict[str, ZitadelWebapp] = web_apps
-            self.user: ZitadelUser = user
+            self.users: Dict[str, ZitadelUser] = users
+            self.tokens: Dict[str, ZitadelToken] = tokens
 
     yield ZitadelCompose()
 

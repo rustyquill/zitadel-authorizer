@@ -6,7 +6,7 @@ import time
 
 
 def test_yarp(zitadel_compose):
-    print(zitadel_compose.user.token.access_token)
+    print(zitadel_compose.tokens)
 
 
 def test_second():

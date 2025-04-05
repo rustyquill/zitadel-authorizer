@@ -2,6 +2,7 @@ import time
 import requests
 from typing import List
 from pydantic import BaseModel, Field
+import pkce
 
 
 class ZitadelIntegration:
@@ -216,6 +217,24 @@ class ZitadelIntegration:
         )
         # get all user details
         return self.get_user(username)
+
+    def add_user_grant(
+        self,
+        user_id: str,
+        project_id: str,
+        role_keys: List[str],
+    ):
+        """add user grant to project"""
+
+        r = self.session.post(
+            f"{self.base_url}/management/v1/users/{user_id}/grants",
+            json={
+                "projectId": project_id,
+                "roleKeys": role_keys,
+            },
+        )
+        if r.status_code not in [200, 409]:
+            r.raise_for_status()
 
     def _get_gorilla_csrf_token(self, html: str):
         """parses the html output for the csrf token"""
