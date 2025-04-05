@@ -64,7 +64,8 @@ const httpBinIntegration = new apigatewayv2_integrations.HttpUrlIntegration('Htt
 const httpLambdaAuthorizer = new apigatewayv2_authorizers.HttpLambdaAuthorizer('ZitadelAuthorizer', authorizerLambda, {
     responseTypes: [apigatewayv2_authorizers.HttpLambdaResponseType.SIMPLE],
     identitySource: ['$request.header.Authorization'],
-    resultsCacheTtl: cdk.Duration.seconds(300),
+    // TODO: enable cache after testing
+    // resultsCacheTtl: cdk.Duration.seconds(300),
 });
 
 httpApi.addRoutes(
