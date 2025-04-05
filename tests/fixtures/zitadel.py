@@ -2,6 +2,8 @@ import pytest
 import requests
 import time
 import pkce
+from testcontainers.compose import DockerCompose
+from pydantic import BaseModel, Field
 
 
 class ZitadelIntegration:
@@ -41,7 +43,7 @@ class ZitadelIntegration:
 
     def get_project(self, name: str):
         r = self.session.post(f"{self.base_url}/management/v1/projects/_search")
-        for result in r.json()["result"]:
+        for result in r.json().get("result", []):
             if result["name"] == name:
                 return result
 
@@ -51,11 +53,18 @@ class ZitadelIntegration:
         r = self.session.post(
             f"{self.base_url}/management/v1/projects/{project_id}/apps/_search"
         )
-        for result in r.json()["result"]:
+        for result in r.json().get("result", []):
             if result["name"] == name:
                 return result
 
         return None
+
+    def get_user(self, user_name: str):
+        r = self.session.get(
+            f"{self.base_url}/management/v1/global/users/_by_login_name",
+            params={"loginName": user_name},
+        )
+        return r.json().get("user", None)
 
     def create_project(
         self,
@@ -65,6 +74,12 @@ class ZitadelIntegration:
         has_project_check: bool = False,
         private_label_setting: str = "PRIVATE_LABELING_SETTING_UNSPECIFIED",
     ):
+
+        # check if the project already exists
+        project = self.get_project(name)
+        if project:
+            return project
+
         r = self.session.post(
             f"{self.base_url}/management/v1/projects",
             json={
@@ -75,13 +90,17 @@ class ZitadelIntegration:
                 "privateLabelingSetting": private_label_setting,
             },
         )
-        # ignore 200 and 409
-        if r.status_code not in [200, 409]:
-            r.raise_for_status()
+        r.raise_for_status()
 
-        return r.json()
+        # get the full project details
+        return self.get_project(name)
 
     def create_api_app(self, project_id: str, name: str):
+        # check if the app already exists
+        app = self.get_app(project_id, name)
+        if app:
+            return app
+
         r = self.session.post(
             f"{self.base_url}/management/v1/projects/{project_id}/apps/api",
             json={
@@ -89,10 +108,10 @@ class ZitadelIntegration:
                 "authMethodType": "API_AUTH_METHOD_TYPE_PRIVATE_KEY_JWT",
             },
         )
-        # ignore 200 and 409
-        if r.status_code not in [200, 409]:
-            r.raise_for_status()
-        return r.json()
+        r.raise_for_status()
+
+        # get the full app details
+        return self.get_app(project_id, name)
 
     def create_api_app_key(self, project_id: str, app_id: str):
         r = self.session.post(
@@ -107,6 +126,10 @@ class ZitadelIntegration:
         return r.json()
 
     def create_web_app(self, project_id: str, name: str):
+        app = self.get_app(project_id, name)
+        if app:
+            return app
+
         r = self.session.post(
             f"{self.base_url}/management/v1/projects/{project_id}/apps/oidc",
             json={
@@ -119,12 +142,17 @@ class ZitadelIntegration:
                 "devMode": True,
             },
         )
-        # ignore 200 and 409
-        if r.status_code not in [200, 409]:
-            r.raise_for_status()
-        return r.json()
+        r.raise_for_status()
+
+        # get the full app details
+        return self.get_app(project_id, name)
 
     def create_user(self, username: str, password: str):
+
+        # check if the user already exists
+        user = self.get_user(username)
+        if user:
+            return user
 
         r = self.session.post(
             f"{self.base_url}/v2/users/human",
@@ -145,10 +173,10 @@ class ZitadelIntegration:
                 },
             },
         )
-        # ignore 200 and 409
-        if r.status_code not in [200, 409]:
-            r.raise_for_status()
-        return r.json()
+        r.raise_for_status()
+
+        # get all user details
+        return self.get_user(username)
 
     def _get_gorilla_csrf_token(self, html: str):
         """parses the html output for the csrf token"""
@@ -327,6 +355,106 @@ class ZitadelIntegration:
 
         token = self._token(code=code, client_id=client_id, code_verifier=code_verifier)
         return token
+
+
+class ZitadelUrls:
+    issuer_url: str = "http://localhost:8080"
+    introspection_endpoint: str = "http://localhost:8080/oauth/v2/introspect"
+
+
+class ZitadelProject(BaseModel):
+    id: str
+    name: str
+
+
+class ZitadelApp(BaseModel):
+    id: str
+    name: str
+
+
+class ZitadelApiApp(ZitadelApp):
+    api_config: dict = Field(alias="apiConfig")
+
+    @property
+    def client_id(self):
+        return self.api_config["clientId"]
+
+
+class ZitadelWebapp(ZitadelApp):
+    oidc_config: dict = Field(alias="oidcConfig")
+
+    @property
+    def client_id(self):
+        return self.oidc_config["clientId"]
+
+
+class ZitadelApiAppKey(BaseModel):
+    id: str
+    key_details: str = Field(alias="keyDetails")
+
+
+class ZitadelUser(BaseModel):
+    id: str
+    user_name: str = Field(alias="userName")
+    password: str
+
+
+@pytest.fixture(scope="session", autouse=True)
+def zitadel_compose(request):
+    compose = DockerCompose(context=".", compose_file_name="docker-compose.yaml")
+    compose.start()
+
+    def teardown():
+        # TODO: enable stop after setup
+        # compose.stop()
+        pass
+
+    request.addfinalizer(teardown)
+
+    zitadel = ZitadelIntegration()
+    zitadel.load_pat()
+    zitadel.test_connectivty()
+
+    # prepare zitadel projects, applications and users
+    project = ZitadelProject(**zitadel.create_project(name="integration-test"))
+    api_app = ZitadelApiApp(
+        **zitadel.create_api_app(project_id=project.id, name="integration-test-api")
+    )
+    api_app_key = ZitadelApiAppKey(
+        **zitadel.create_api_app_key(project_id=project.id, app_id=api_app.id)
+    )
+    web_app = ZitadelWebapp(
+        **zitadel.create_web_app(project_id=project.id, name="integration-test-web")
+    )
+    user = ZitadelUser(
+        **{
+            **zitadel.create_user(
+                username="integration-test-user",
+                password="integration-test-password",
+            ),
+            **{"password": "integration-test-password"},
+        }
+    )
+
+    print(
+        zitadel.login_user(
+            username=user.user_name,
+            password=user.password,
+            client_id=web_app.client_id,
+        )
+    )
+
+    class ZitadelCompose:
+        def __init__(self):
+            self.zitadel = zitadel
+            self.urls: ZitadelUrls = ZitadelUrls()
+            self.project: ZitadelProject = project
+            self.api_app: ZitadelApiApp = api_app
+            self.api_app_key: ZitadelApiAppKey = api_app_key
+            self.web_app: ZitadelWebapp = web_app
+            self.user: ZitadelUser = user
+
+    yield ZitadelCompose()
 
 
 @pytest.fixture

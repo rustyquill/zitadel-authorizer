@@ -2,7 +2,6 @@
 Lambda Authorizer for API Gateway to authenticate and authorize requests based on Zitadel tokens
 """
 
-import logging
 from aws_lambda_powertools.utilities.data_classes.api_gateway_authorizer_event import (
     APIGatewayAuthorizerEventV2,
     APIGatewayAuthorizerResponseV2,
