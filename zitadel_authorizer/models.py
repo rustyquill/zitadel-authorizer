@@ -1,7 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import base64
 import json
 from aws_lambda_powertools.utilities import parameters
+from typing import List, Optional, Dict
+from typing_extensions import Annotated
+from pydantic.functional_validators import BeforeValidator
 
 
 class ApplicationKey(BaseModel):
@@ -34,3 +37,55 @@ class ApplicationKey(BaseModel):
 
         key_data = parameters.get_parameter(parameter_name, decrypt=secure_string)
         return ApplicationKey.from_base64_string(key_data)
+
+
+# zitadel passes the project roles in the format:
+# "urn:zitadel:iam:org:project:roles": {
+# {
+#     'ROLEA': {'PROJECT_ID': 'ZITADEL_DOMAIN'},
+#     'ROLEB': {'PROJECT_ID': 'ZITADEL_DOMAIN'}
+# }
+# we are only interested in the role keys!
+def convert_project_roles_to_list(v: Dict[str, Dict[str, str]]) -> List[str]:
+    print(v)
+    return [role for role in v.keys()]
+
+
+PROJECT_ROLES = Annotated[List[str], BeforeValidator(convert_project_roles_to_list)]
+
+
+class IntrospectionResponse(BaseModel):
+    """
+    Introspection response class to handle the response from the introspection endpoint
+    """
+
+    # active is the only required field,
+    # if a token is not active the other fields are not passed
+    active: bool
+
+    scope: Optional[str] = None
+    client_id: Optional[str] = None
+    token_type: Optional[str] = None
+    exp: Optional[int] = None
+    iat: Optional[int] = None
+    auth_time: Optional[int] = None
+    nbf: Optional[int] = None
+    sub: Optional[str] = None
+    aud: Optional[List[str]] = None
+    amr: Optional[List[str]] = None
+    iss: Optional[str] = None
+    jti: Optional[str] = None
+    username: Optional[str] = None
+    name: Optional[str] = None
+    given_name: Optional[str] = None
+    family_name: Optional[str] = None
+    nickname: Optional[str] = None
+    locale: Optional[str] = None
+    updated_at: Optional[int] = None
+    preferred_username: Optional[str] = None
+    email: Optional[str] = None
+    email_verified: Optional[bool] = None
+
+    project_roles: Optional[PROJECT_ROLES] = Field(
+        alias="urn:zitadel:iam:org:project:roles", default=None
+    )

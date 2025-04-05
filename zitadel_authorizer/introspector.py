@@ -8,7 +8,7 @@ import requests
 import time
 import jwt
 
-from models import ApplicationKey
+from .models import ApplicationKey, IntrospectionResponse
 
 
 class Introspector(IntrospectTokenValidator):
@@ -16,36 +16,44 @@ class Introspector(IntrospectTokenValidator):
     Introspector class to handle the introspection logic
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        application_key: ApplicationKey,
+        issuer_url: str,
+        introspection_endpoint: str,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
+
+        self.application_key: ApplicationKey = application_key
+        self.issuer_url = issuer_url
+        self.introspection_endpoint = introspection_endpoint
 
     def introspect_token(
         self,
-        application_key: ApplicationKey,
         token: str,
-        zitadel_domain: str,
-        zitadel_introspection_endpoint: str,
     ):
         """
         introspect the token using the introspection endpoint
         """
 
         payload = dict(
-            iss=application_key.clientId,
-            sub=application_key.clientId,
-            aud=zitadel_domain,
-            exp=int(time().time()) + 60 * 5,
-            iat=int(time().time()),
+            iss=self.application_key.clientId,
+            sub=self.application_key.clientId,
+            aud=self.issuer_url,
+            exp=int(time.time()) + 60 * 60,  # Expires in 1 hour
+            iat=int(time.time()),
         )
 
         headers = dict(
             alg="RS256",
-            kid=application_key.keyId,
+            kid=self.application_key.keyId,
         )
 
         jwt_token = jwt.encode(
             payload,
-            application_key.key,
+            self.application_key.key,
             algorithm="RS256",
             headers=headers,
         )
@@ -57,8 +65,10 @@ class Introspector(IntrospectTokenValidator):
         )
 
         response = requests.post(
-            url=zitadel_introspection_endpoint,
+            url=self.introspection_endpoint,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data=data,
         )
-        print(response.json())
+        response.raise_for_status()
+
+        return IntrospectionResponse(**response.json())

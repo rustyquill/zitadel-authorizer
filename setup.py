@@ -8,7 +8,6 @@ setup(
         "Authlib>=1.5.2",
         "aws-lambda-powertools>=3.6.0",
         "cryptography",
-        "jwt>=1.3.1",
         "pydantic>=2.10.6",
         "PyJWT>=2.10.1",
         "requests>=2.32.3",
