@@ -1,6 +1,7 @@
 import pytest
 from testcontainers.compose import DockerCompose
 from typing import Dict
+import concurrent.futures
 from .zitadel_integration import (
     ZitadelIntegration,
     ZitadelProject,
@@ -13,7 +14,7 @@ from .zitadel_integration import (
 )
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session", autouse=False)
 def zitadel_compose(request):
     compose = DockerCompose(context=".", compose_file_name="docker-compose.yaml")
     compose.start()
@@ -30,30 +31,37 @@ def zitadel_compose(request):
     zitadel.load_pat()
     zitadel.test_connectivty()
 
+    yield zitadel
+
+
+@pytest.fixture(scope="session", autouse=False)
+def zitadel_instance(zitadel_compose):
     # prepare test project with roles
-    project = ZitadelProject(**zitadel.create_project(name="integration-test"))
-    zitadel.create_project_roles(project_id=project.id, roles=["ADMIN", "USER"])
+    project = ZitadelProject(**zitadel_compose.create_project(name="integration-test"))
+    zitadel_compose.create_project_roles(project_id=project.id, roles=["ADMIN", "USER"])
 
     # the api app is used by the introspector to introspect the opaque user token
     api_app = ZitadelApiApp(
-        **zitadel.create_api_app(project_id=project.id, name="integration-test-api")
+        **zitadel_compose.create_api_app(
+            project_id=project.id, name="integration-test-api"
+        )
     )
     api_app_key = ZitadelApiAppKey(
-        **zitadel.create_api_app_key(project_id=project.id, app_id=api_app.id)
+        **zitadel_compose.create_api_app_key(project_id=project.id, app_id=api_app.id)
     )
 
     # initialize webapps with bearer (opaque) and jwt tokens
     # with or without token assertions
     web_apps = dict(
         bearer=ZitadelWebapp(
-            **zitadel.create_web_app(
+            **zitadel_compose.create_web_app(
                 project_id=project.id,
                 name="integration-test-web-bearer",
                 access_token_type="OIDC_TOKEN_TYPE_BEARER",
             )
         ),
         web_app_bearer_with_assertions=ZitadelWebapp(
-            **zitadel.create_web_app(
+            **zitadel_compose.create_web_app(
                 project_id=project.id,
                 name="integration-test-web-bearer-with-assertions",
                 access_token_type="OIDC_TOKEN_TYPE_BEARER",
@@ -63,14 +71,14 @@ def zitadel_compose(request):
             )
         ),
         web_app_jwt=ZitadelWebapp(
-            **zitadel.create_web_app(
+            **zitadel_compose.create_web_app(
                 project_id=project.id,
                 name="integration-test-web-jwt",
                 access_token_type="OIDC_TOKEN_TYPE_JWT",
             )
         ),
         web_app_jwt_with_assertions=ZitadelWebapp(
-            **zitadel.create_web_app(
+            **zitadel_compose.create_web_app(
                 project_id=project.id,
                 name="integration-test-web-jwt-with-assertions",
                 access_token_type="OIDC_TOKEN_TYPE_JWT",
@@ -86,7 +94,7 @@ def zitadel_compose(request):
     users = dict(
         user_no_grants=ZitadelUser(
             **{
-                **zitadel.create_user(
+                **zitadel_compose.create_user(
                     username="integration-test-user",
                     password="integration-test-password",
                 ),
@@ -95,7 +103,7 @@ def zitadel_compose(request):
         ),
         user_with_single_grant=ZitadelUser(
             **{
-                **zitadel.create_user(
+                **zitadel_compose.create_user(
                     username="integration-test-user-with-role",
                     password="integration-test-password",
                 ),
@@ -104,7 +112,7 @@ def zitadel_compose(request):
         ),
         user_with_two_grants=ZitadelUser(
             **{
-                **zitadel.create_user(
+                **zitadel_compose.create_user(
                     username="integration-test-user-with-two-roles",
                     password="integration-test-password",
                 ),
@@ -112,74 +120,65 @@ def zitadel_compose(request):
             }
         ),
     )
-    zitadel.add_user_grant(
+    zitadel_compose.add_user_grant(
         project_id=project.id,
         user_id=users.get("user_with_single_grant").id,
         role_keys=["USER"],
     )
-    zitadel.add_user_grant(
+    zitadel_compose.add_user_grant(
         project_id=project.id,
         user_id=users.get("user_with_two_grants").id,
         role_keys=["ADMIN", "USER"],
     )
 
-    tokens = []
-    for user_key, user_value in users.items():
-        for web_app_key, web_app_value in web_apps.items():
-            tokens.append(
-                dict(
-                    user=user_key,
-                    web_app=web_app_key,
-                    token=ZitadelToken(
-                        **zitadel.login_user(
-                            username=user_value.username,
-                            password=user_value.password,
-                            client_id=web_app_value.client_id,
-                        )
-                    ),
-                )
-            )
-            # login users to all web apps
-            # tokens[fuser_key] = ZitadelToken(
-            #     **zitadel.login_user(
-            #         username=user_value.username,
-            #         password=user_value.password,
-            #         client_id=web_app_valye.client_id,
-            #     )
-            # )
-            # print(
-            #     f"login user {user_key} to web app {web_app_key} {web_app_value.name}"
-            # )
-
-    # # login users to all web apps
-    # for user in [
-    #     user,
-    #     user_with_single_grant,
-    #     user_with_two_grants,
-    # ]:
-    # pass
-
-    # TODO: store tokens
-    # user.token = ZitadelToken(
-    #     **zitadel.login_user(
-    #         username=user.username,
-    #         password=user.password,
-    #         client_id=web_app.client_id,
-    #     )
-    # )
-
-    class ZitadelCompose:
+    class ZitadelInstance:
         def __init__(self):
-            self.zitadel = zitadel
             self.urls: ZitadelUrls = ZitadelUrls()
             self.project: ZitadelProject = project
             self.api_app: ZitadelApiApp = api_app
             self.api_app_key: ZitadelApiAppKey = api_app_key
             self.web_apps: Dict[str, ZitadelWebapp] = web_apps
             self.users: Dict[str, ZitadelUser] = users
-            self.tokens: Dict[str, ZitadelToken] = tokens
 
-    yield ZitadelCompose()
+    yield ZitadelInstance()
+
+
+@pytest.fixture(scope="session", autouse=False)
+def zitadel_tokens(zitadel_compose, zitadel_instance):
+    """lease all tokens for all users and web apps, parallelized for performance"""
+
+    def lease_token(user_key, user_value, web_app_key, web_app_value):
+        return dict(
+            user=user_key,
+            web_app=web_app_key,
+            token=ZitadelToken(
+                **zitadel_compose.login_user(
+                    username=user_value.username,
+                    password=user_value.password,
+                    client_id=web_app_value.client_id,
+                )
+            ),
+        )
+
+    tokens = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for user_key, user_value in zitadel_instance.users.items():
+            for web_app_key, web_app_value in zitadel_instance.web_apps.items():
+                futures.append(
+                    executor.submit(
+                        lease_token,
+                        user_key,
+                        user_value,
+                        web_app_key,
+                        web_app_value,
+                    )
+                )
+
+        for future in concurrent.futures.as_completed(futures):
+            tokens.append(future.result())
+
+    yield tokens
 
 
 @pytest.fixture
