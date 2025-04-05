@@ -56,7 +56,6 @@ cd example
 cdk boostrap
 
 # synth and deploy the stack
-cdk synth
 cdk deploy
 ```
 
