@@ -7,5 +7,4 @@ node_modules
 .cdk.staging
 cdk.out
 
-# ignore changes to the secret arn
-secret_arn.ts
+.env

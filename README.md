@@ -39,7 +39,7 @@ The [example](./example/) folder contains an example API Gateway Deployment with
   - Generate a JSON key for the API application
   - Download the key file and convert it to a base64 encoded string
   - Save the base64 encoded string in your AWS account in the Parameter Store as a Secure String
-  - Update the variable `secret_arn` in [secret_arn.ts](./example/secret_arn.ts) with the arn of your secure string
+- Copy the [./examples/.env.example](./example/.env.example) file to [./examples/.env](./examples/.env) and replace its values
 - Create a new SPA or Web application with PKCE and `Bearer Token` as Auth Token Type
 - Import the postman collection [zitadel_authorizer - Example.postman_collection.json](./example/zitadel_authorizer%20-%20Example.postman_collection.json) into your postman.
   - Replace the variable `zitadel_url` with the url of your zitadel instance
@@ -60,8 +60,8 @@ cdk synth
 cdk deploy
 ```
 
-Once deployed get the API gateway endpoint url - open the AWS console, navigate to API Gateway -> Stages -> Default and copy the base url.
-Then open the postman collection and replace the variables `api_base_url` with the api gateways baseulr
+Once deployed get the API gateway endpoint url - open the AWS console, navigate to API Gateway -> Stages -> Default and copy the invoke url.
+Then open the postman collection and replace the variables `api_base_url` with the api gateways invoke url
 
 ## Weblinks
 

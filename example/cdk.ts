@@ -1,11 +1,13 @@
 #!/usr/bin/env node
+import * as dotenv from "dotenv";
 import path = require('path');
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigatewayv2_integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as apigatewayv2_authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
-import { secret_arn } from './secret_arn';
+
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = new cdk.App();
 const stack = new cdk.Stack(app, 'ExampleHttpApiStack');
