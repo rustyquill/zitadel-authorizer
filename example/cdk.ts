@@ -12,7 +12,7 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const app = new cdk.App();
 const stack = new cdk.Stack(app, 'ExampleHttpApiStack');
 
-// build the auhtorizer lambda
+// build the authorizer lambda
 const authorizerLambda = new lambda.Function(stack, 'AuthorizerLambda', {
     runtime: lambda.Runtime.PYTHON_3_13,
     handler: 'index.handler',
@@ -59,6 +59,42 @@ authorizerLambda.addToRolePolicy(new cdk.aws_iam.PolicyStatement({
     resources: [process.env.APPLICATION_KEY_ARN || "undefined"],
 }));
 
+// build the service lambda
+const serviceLambda = new lambda.Function(stack, 'ServiceLambda', {
+    runtime: lambda.Runtime.PYTHON_3_13,
+    handler: 'index.handler',
+    environment: {
+        POWERTOOLS_LOG_LEVEL: 'DEBUG',
+        POWERTOOLS_SERVICE_NAME: 'service-lambda',
+    },
+    architecture: lambda.Architecture.ARM_64,
+    timeout: cdk.Duration.seconds(15),
+    code: lambda.Code.fromAsset('..', {
+        bundling: {
+            image: lambda.Runtime.PYTHON_3_13.bundlingImage,
+            bundlingFileAccess: cdk.BundlingFileAccess.VOLUME_COPY,
+            user: 'root',
+            platform: 'linux/arm64',
+            environment: {
+                PIP_CACHE_DIR: '/cache',
+            },
+            volumes: [
+                {
+                    hostPath: path.join(__dirname, 'lambda', 'service', '.cache'),
+                    containerPath: '/cache',
+                }
+            ],
+            command: [
+                'bash', '-c',
+                `cd example/lambda/service \\
+                    && pip install --upgrade pip \\
+                    && pip install -r requirements.txt -t /asset-output \\
+                    && cp -au index.py /asset-output`
+            ]
+        }
+    })
+});
+
 const httpApi = new apigatewayv2.HttpApi(stack, 'HttpApi')
 const httpBinIntegration = new apigatewayv2_integrations.HttpUrlIntegration('HttpBin', 'https://httpbin.org/anything');
 const httpLambdaAuthorizer = new apigatewayv2_authorizers.HttpLambdaAuthorizer('ZitadelAuthorizer', authorizerLambda, {
@@ -67,20 +103,23 @@ const httpLambdaAuthorizer = new apigatewayv2_authorizers.HttpLambdaAuthorizer('
     // TODO: enable cache after testing
     // resultsCacheTtl: cdk.Duration.seconds(300),
 });
+const httpLambdaIntegration = new apigatewayv2_integrations.HttpLambdaIntegration('ServiceLambda', serviceLambda, {
+    payloadFormatVersion: apigatewayv2.PayloadFormatVersion.VERSION_2_0,
+});
 
 httpApi.addRoutes(
     {
-        path: '/public',
+        path: '/public/{proxy+}',
         methods: [apigatewayv2.HttpMethod.GET],
-        integration: httpBinIntegration
+        integration: httpLambdaIntegration
     },
 );
 
 httpApi.addRoutes(
     {
-        path: '/private',
+        path: '/private/{proxy+}',
         methods: [apigatewayv2.HttpMethod.GET],
-        integration: httpBinIntegration,
+        integration: httpLambdaIntegration,
         authorizer: httpLambdaAuthorizer
     }
 );
