@@ -60,11 +60,21 @@ class ZitadelIntegration:
         return None
 
     def get_user(self, user_name: str):
-        r = self.session.get(
-            f"{self.base_url}/management/v1/global/users/_by_login_name",
-            params={"loginName": user_name},
+        r = self.session.post(
+            f"{self.base_url}/v2/users",
+            json=dict(
+                queries=[
+                    dict(
+                        userNameQuery=dict(
+                            userName=user_name,
+                            method="TEXT_QUERY_METHOD_EQUALS",
+                        ),
+                    )
+                ],
+            ),
         )
-        return r.json().get("user", None)
+        print(r.json())
+        return r.json().get("result", [{}])[0]
 
     def create_project(
         self,
@@ -175,6 +185,11 @@ class ZitadelIntegration:
         )
         r.raise_for_status()
 
+        # skip mfa
+        user_id = r.json().get("userId")
+        r = self.session.post(
+            url=f"{self.base_url}/v2/users/{user_id}/mfa_init_skipped", json={}
+        )
         # get all user details
         return self.get_user(username)
 
@@ -399,8 +414,8 @@ class ZitadelToken(BaseModel):
 
 
 class ZitadelUser(BaseModel):
-    id: str
-    user_name: str = Field(alias="userName")
+    id: str = Field(alias="userId")
+    username: str
     password: str
     token: ZitadelToken = Field(default_factory=ZitadelToken)
 
@@ -444,7 +459,7 @@ def zitadel_compose(request):
 
     user.token = ZitadelToken(
         **zitadel.login_user(
-            username=user.user_name,
+            username=user.username,
             password=user.password,
             client_id=web_app.client_id,
         )
