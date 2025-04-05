@@ -91,6 +91,10 @@ def test_introspection_response_no_grants(introspection_response_bearer_no_grant
     assert response.email_verified is True
     assert response.project_roles == None
 
+    assert response.has_scopes(["openid", "profile"]) is True
+    assert response.has_scopes(["openid", "profile", "email"]) is True
+    assert response.has_scopes(["openid", "profile", "email", "offline"]) is False
+
 
 def test_introspect_response_with_grants(introspection_response_bearer_with_grants):
     from zitadel_authorizer.models import IntrospectionResponse
@@ -127,3 +131,8 @@ def test_introspect_response_with_grants(introspection_response_bearer_with_gran
     assert response.email == "integration-test-user-with-two-roles@zitadel.localhost"
     assert response.email_verified is True
     assert response.project_roles == ["ADMIN", "USER"]
+
+    assert response.has_roles(["ADMIN"]) is True
+    assert response.has_roles(["USER"]) is True
+    assert response.has_roles(["ADMIN", "USER"]) is True
+    assert response.has_roles(["ADMIN", "USER", "MANAGER"]) is False

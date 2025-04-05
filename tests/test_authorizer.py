@@ -1,34 +1,37 @@
-import logging
-import pytest
-
-
-def test_authorizer_from_apigateway_event(
-    event_without_authorization, event_with_token, opaque_token, caplog
+def test_authorizer(
+    introspection_response_bearer_no_grants, introspection_response_bearer_with_grants
 ):
     from zitadel_authorizer.authorizer import Authorizer
+    from zitadel_authorizer.models import IntrospectionResponse
 
-    with pytest.raises(ValueError, match="No Authorization header found") as e:
-        authorizer = Authorizer.from_api_gateway_event(event_without_authorization)
+    unauthenticated = IntrospectionResponse(active=False)
+    no_grants = IntrospectionResponse(**introspection_response_bearer_no_grants)
+    with_grants = IntrospectionResponse(**introspection_response_bearer_with_grants)
 
-    authorizer = Authorizer.from_api_gateway_event(event_with_token)
-    assert authorizer.bearer_token == opaque_token
+    authorizer = Authorizer()
+    assert authorizer.required_scopes == []
+    assert authorizer.required_roles == []
 
+    assert authorizer.is_authorized(unauthenticated) is False
+    assert authorizer.is_authorized(no_grants) is True
+    assert authorizer.is_authorized(with_grants) is True
 
-def test_authorizer_is_jwt_token(opaque_token, jwt_token):
-    from zitadel_authorizer.authorizer import Authorizer
+    authorizer = Authorizer(required_scopes=["openid", "profile", "email"])
+    assert authorizer.is_authorized(unauthenticated) is False
+    assert authorizer.is_authorized(no_grants) is True
+    assert authorizer.is_authorized(with_grants) is True
 
-    authorizer = Authorizer(opaque_token)
-    assert authorizer.is_jwt_token() is False
+    authorizer = Authorizer(required_scopes=["openid", "profile", "email", "offline"])
+    assert authorizer.is_authorized(unauthenticated) is False
+    assert authorizer.is_authorized(no_grants) is False
+    assert authorizer.is_authorized(with_grants) is False
 
-    authorizer = Authorizer(jwt_token)
-    assert authorizer.is_jwt_token() is True
+    authorizer = Authorizer(required_roles=["USER", "ADMIN"])
+    assert authorizer.is_authorized(unauthenticated) is False
+    assert authorizer.is_authorized(no_grants) is False
+    assert authorizer.is_authorized(with_grants) is True
 
-
-def test_authorizer_is_opaque_token(opaque_token, jwt_token):
-    from zitadel_authorizer.authorizer import Authorizer
-
-    authorizer = Authorizer(opaque_token)
-    assert authorizer.is_opaque_token() is True
-
-    authorizer = Authorizer(jwt_token)
-    assert authorizer.is_opaque_token() is False
+    authorizer = Authorizer(required_roles=["USER", "ADMIN", "WRITER"])
+    assert authorizer.is_authorized(unauthenticated) is False
+    assert authorizer.is_authorized(no_grants) is False
+    assert authorizer.is_authorized(with_grants) is False

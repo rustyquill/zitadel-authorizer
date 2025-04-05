@@ -2,16 +2,8 @@
 Lambda Authorizer for API Gateway to authenticate and authorize requests based on Zitadel tokens
 """
 
-from aws_lambda_powertools.utilities.data_classes.api_gateway_authorizer_event import (
-    APIGatewayAuthorizerEventV2,
-    APIGatewayAuthorizerResponseV2,
-)
-
-
-# TODO: this class needs rewriting, bearer_token is retrieved by helper function
-# introspection is handled in introspector class. instead this class should receive
-# the introspected token and then use it in combination with some configuration options
-# to authorize or deny the request
+from typing import List
+from .models import IntrospectionResponse
 
 
 class Authorizer:
@@ -19,45 +11,34 @@ class Authorizer:
     Authorizer class to handle the authorizer logic
     """
 
-    bearer_token: str
-
-    def __init__(self, token: str):
+    def __init__(
+        self,
+        required_scopes: List[str] = [],
+        required_roles: List[str] = [],
+    ):
         """
         Initialize the Authorizer object
         """
 
-        self.bearer_token = token
+        self.required_scopes = required_scopes
+        self.required_roles = required_roles
 
-    @classmethod
-    def from_api_gateway_event(cls, event: APIGatewayAuthorizerEventV2):
+    def is_authorized(self, introspection_token: IntrospectionResponse):
         """
-        Create an Authorizer object from an API Gateway Authorizer Event
-        """
-
-        parsed_event = APIGatewayAuthorizerEventV2(event)
-        token = parsed_event.headers.get("authorization")
-
-        if not token:
-            raise ValueError("No Authorization header found")
-
-        return cls(token[0].replace("Bearer ", ""))
-
-    def is_jwt_token(self):
-        """
-        Check if the token is a JWT token, simply checks if token starts with ey
+        Check if the token is authorized based on the required scopes and roles
         """
 
-        if not self.bearer_token.startswith("ey"):
+        if not introspection_token.active:
             return False
 
-        return True
+        if self.required_scopes and not introspection_token.has_scopes(
+            self.required_scopes
+        ):
+            return False
 
-    def is_opaque_token(self):
-        """
-        Check if the token is an opaque token
-        """
-
-        if self.is_jwt_token():
+        if self.required_roles and not introspection_token.has_roles(
+            self.required_roles
+        ):
             return False
 
         return True

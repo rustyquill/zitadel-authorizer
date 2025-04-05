@@ -18,6 +18,15 @@ class IntrospectorSettings(BaseSettings):
     APPLICATION_KEY_ARN: str
 
 
+class AuthorizerSettings(BaseSettings):
+    """
+    Settings for the Authorizer.
+    """
+
+    REQUIRED_SCOPES: List[str] = []
+    REQUIRED_ROLES: List[str] = []
+
+
 class ApplicationKey(BaseModel):
     """
     ApplicationKey class to handle the application key
@@ -99,3 +108,24 @@ class IntrospectionResponse(BaseModel):
     project_roles: Optional[PROJECT_ROLES] = Field(
         alias="urn:zitadel:iam:org:project:roles", default=None
     )
+
+    def has_scopes(self, scopes: List[str]) -> bool:
+        """
+        Check if the token has the required scopes
+        """
+
+        if not self.scope:
+            return False
+
+        token_scopes = self.scope.split(" ")
+        return all(scope in token_scopes for scope in scopes)
+
+    def has_roles(self, roles: List[str]) -> bool:
+        """
+        Check if the token has the required roles
+        """
+
+        if not self.project_roles:
+            return False
+
+        return all(role in self.project_roles for role in roles)
