@@ -1,0 +1,147 @@
+{
+	"info": {
+		"_postman_id": "1d191060-3365-48e5-aa53-38196f887557",
+		"name": "zitadel_authorizer - Example",
+		"description": "postman collection to test the zitadel authorizer",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "40881760"
+	},
+	"item": [
+		{
+			"name": "public",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/public",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"public"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "private - no auth",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/private",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"private"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "private - with auth",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/private",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"private"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "oauth2",
+		"oauth2": [
+			{
+				"key": "scope",
+				"value": "profile email openid urn:zitadel:iam:org:project:id:zitadel:aud",
+				"type": "string"
+			},
+			{
+				"key": "accessTokenUrl",
+				"value": "{{zitadel_url}}/oauth/v2/token",
+				"type": "string"
+			},
+			{
+				"key": "authUrl",
+				"value": "{{zitadel_url}}/oauth/v2/authorize",
+				"type": "string"
+			},
+			{
+				"key": "clientId",
+				"value": "{{client_id}}",
+				"type": "string"
+			},
+			{
+				"key": "grant_type",
+				"value": "authorization_code_with_pkce",
+				"type": "string"
+			},
+			{
+				"key": "tokenName",
+				"value": "{{token_name}}",
+				"type": "string"
+			},
+			{
+				"key": "useBrowser",
+				"value": true,
+				"type": "boolean"
+			},
+			{
+				"key": "addTokenTo",
+				"value": "header",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://cghnha20c0.execute-api.eu-central-1.amazonaws.com",
+			"type": "string"
+		},
+		{
+			"key": "zitadel_url",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

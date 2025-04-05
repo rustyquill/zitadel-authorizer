@@ -29,6 +29,25 @@ Password: admin
 
 The [example](./example/) folder contains an example API Gateway Deployment with a custom lambda authorizer and endpoint using the package.
 
+### Requirements
+
+- You need an AWS account to deploy the API gateway and Lambdas
+- You need Postman installed to impport the 
+- Your Zitadel instance needs to be publicly accessible.
+- Create a new project in your zitadel instance
+- Create an API application in the project. This app will be used by the API Gateway authorizer lambda to introspect the given user token.
+  - Generate a JSON key for the API application
+  - Download the key file and convert it to a base64 encoded string
+  - Save the base64 encoded string in your AWS account in the Parameter Store as a Secure String
+  - Update the variable `secret_arn` in [secret_arn.ts](./example/secret_arn.ts) with the arn of your secure string
+- Create a new SPA or Web application with PKCE and `Bearer Token` as Auth Token Type
+- Import the postman collection [zitadel_authorizer - Example.postman_collection.json](./example/zitadel_authorizer%20-%20Example.postman_collection.json) into your postman.
+  - Replace the variable `zitadel_url` with the url of your zitadel instance
+  - Replace the variable `client_id` with the client id of your SPA or web application.
+  - You can now lease new access tokens using postman and use the token to call the API once it's deployed!
+
+First, create a new project in your zitadel instance and create a spa and api application
+
 ```bash
 cd example
 
@@ -40,6 +59,9 @@ cdk boostrap
 cdk synth
 cdk deploy
 ```
+
+Once deployed get the API gateway endpoint url - open the AWS console, navigate to API Gateway -> Stages -> Default and copy the base url.
+Then open the postman collection and replace the variables `api_base_url` with the api gateways baseulr
 
 ## Weblinks
 
