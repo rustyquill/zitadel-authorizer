@@ -2,6 +2,7 @@ from zitadel_authorizer import (
     Introspector,
     ApplicationKey,
     Authorizer,
+    AuthorizerSettings,
     IntrospectorSettings,
     IntrospectionResponse,
     get_bearer_token_from_aws_gateway_authorizer_event,
@@ -24,6 +25,9 @@ def handler(event: APIGatewayAuthorizerEventV2, context: LambdaContext):
 
     logger.info("Loading introspection settings")
     introspection_settings: IntrospectorSettings = IntrospectorSettings()
+
+    logger.info("Loading authorizer settings")
+    authorizer_settings: AuthorizerSettings = AuthorizerSettings()
 
     logger.info(
         f"Loading application key from parameter store {introspection_settings.APPLICATION_KEY_ARN}"
@@ -50,22 +54,17 @@ def handler(event: APIGatewayAuthorizerEventV2, context: LambdaContext):
     logger.debug(f"Introspected token: {introspected_token}")
 
     # initialize the authorizer
+    authorizer = Authorizer(
+        required_scopes=authorizer_settings.REQUIRED_SCOPES,
+        required_roles=authorizer_settings.REQUIRED_ROLES,
+    )
 
-    # do stuff
+    response = APIGatewayAuthorizerResponseV2(
+        authorize=authorizer.is_authorized(introspection_token=introspected_token),
+        context=introspected_token.model_dump(),
+    )
 
-    # return response
+    logger.info("Returning response")
+    logger.debug(f"Response: {response.asdict()}")
 
-    # authorizer = Authorizer(event)
-
-    response = {
-        "isAuthorized": True,
-        "context": {
-            "stringKey": "value",
-            "numberKey": 1,
-            "booleanKey": True,
-            "arrayKey": ["value1", "value2"],
-            "mapKey": {"value1": "value2"},
-        },
-    }
-
-    return response
+    return response.asdict()
