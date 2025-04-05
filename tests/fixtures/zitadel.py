@@ -4,6 +4,7 @@ import time
 import pkce
 from testcontainers.compose import DockerCompose
 from pydantic import BaseModel, Field
+from typing import Dict, List
 
 
 class ZitadelIntegration:
@@ -73,7 +74,6 @@ class ZitadelIntegration:
                 ],
             ),
         )
-        print(r.json())
         return r.json().get("result", [{}])[0]
 
     def create_project(
@@ -105,6 +105,18 @@ class ZitadelIntegration:
         # get the full project details
         return self.get_project(name)
 
+    def create_project_roles(self, project_id: str, roles: List[str]):
+        for role in roles:
+            r = self.session.post(
+                f"{self.base_url}/management/v1/projects/{project_id}/roles",
+                json={
+                    "roleKey": role,
+                    "displayName": role,
+                },
+            )
+            if r.status_code not in [200, 409]:
+                r.raise_for_status()
+
     def create_api_app(self, project_id: str, name: str):
         # check if the app already exists
         app = self.get_app(project_id, name)
@@ -135,7 +147,15 @@ class ZitadelIntegration:
         r.raise_for_status()
         return r.json()
 
-    def create_web_app(self, project_id: str, name: str):
+    def create_web_app(
+        self,
+        project_id: str,
+        name: str,
+        access_token_type: str,
+        access_token_role_assertion: bool = False,
+        id_token_role_assertion: bool = False,
+        id_token_userinfo_assertion: bool = False,
+    ):
         app = self.get_app(project_id, name)
         if app:
             return app
@@ -145,10 +165,17 @@ class ZitadelIntegration:
             json={
                 "name": name,
                 "responseTypes": ["OIDC_RESPONSE_TYPE_CODE"],
-                "grantTypes": ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE"],
+                "grantTypes": [
+                    "OIDC_GRANT_TYPE_AUTHORIZATION_CODE",
+                    "OIDC_GRANT_TYPE_REFRESH_TOKEN",
+                ],
                 "redirectUris": ["http://localhost:1234"],
                 "appType": "OIDC_APP_TYPE_WEB",
                 "authMethodType": "OIDC_AUTH_METHOD_TYPE_NONE",
+                "accessTokenType": access_token_type,
+                "accessTokenRoleAssertion": access_token_role_assertion,
+                "idTokenRoleAssertion": id_token_role_assertion,
+                "idTokenUserinfoAssertion": id_token_userinfo_assertion,
                 "devMode": True,
             },
         )
@@ -417,7 +444,6 @@ class ZitadelUser(BaseModel):
     id: str = Field(alias="userId")
     username: str
     password: str
-    token: ZitadelToken = Field(default_factory=ZitadelToken)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -436,17 +462,61 @@ def zitadel_compose(request):
     zitadel.load_pat()
     zitadel.test_connectivty()
 
-    # prepare zitadel projects, applications and users
+    # Possible values: [OIDC_TOKEN_TYPE_BEARER, ]
+
+    # prepare test project with roles
     project = ZitadelProject(**zitadel.create_project(name="integration-test"))
+    zitadel.create_project_roles(project_id=project.id, roles=["ADMIN", "USER"])
+
+    # the api app is used by the introspector to introspect the opaque user token
     api_app = ZitadelApiApp(
         **zitadel.create_api_app(project_id=project.id, name="integration-test-api")
     )
     api_app_key = ZitadelApiAppKey(
         **zitadel.create_api_app_key(project_id=project.id, app_id=api_app.id)
     )
-    web_app = ZitadelWebapp(
-        **zitadel.create_web_app(project_id=project.id, name="integration-test-web")
+
+    # create webapps with bearer (opaque) and jwt tokens
+    web_apps = dict(
+        bearer=ZitadelWebapp(
+            **zitadel.create_web_app(
+                project_id=project.id,
+                name="integration-test-web-bearer",
+                access_token_type="OIDC_TOKEN_TYPE_BEARER",
+            )
+        ),
+        bearer_with_assertions=ZitadelWebapp(
+            **zitadel.create_web_app(
+                project_id=project.id,
+                name="integration-test-web-bearer-with-assertions",
+                access_token_type="OIDC_TOKEN_TYPE_BEARER",
+                access_token_role_assertion=True,
+                id_token_role_assertion=True,
+                id_token_userinfo_assertion=True,
+            )
+        ),
+        jwt=ZitadelWebapp(
+            **zitadel.create_web_app(
+                project_id=project.id,
+                name="integration-test-web-jwt",
+                access_token_type="OIDC_TOKEN_TYPE_JWT",
+            )
+        ),
+        jwt_with_assertions=ZitadelWebapp(
+            **zitadel.create_web_app(
+                project_id=project.id,
+                name="integration-test-web-jwt-with-assertions",
+                access_token_type="OIDC_TOKEN_TYPE_JWT",
+                access_token_role_assertion=True,
+                id_token_role_assertion=True,
+                id_token_userinfo_assertion=True,
+            )
+        ),
     )
+
+    # create one user without any authorizations and one user with authorizations for the
+    # test project
+    # TODO: assign authorizations
     user = ZitadelUser(
         **{
             **zitadel.create_user(
@@ -457,13 +527,14 @@ def zitadel_compose(request):
         }
     )
 
-    user.token = ZitadelToken(
-        **zitadel.login_user(
-            username=user.username,
-            password=user.password,
-            client_id=web_app.client_id,
-        )
-    )
+    # TODO: store tokens
+    # user.token = ZitadelToken(
+    #     **zitadel.login_user(
+    #         username=user.username,
+    #         password=user.password,
+    #         client_id=web_app.client_id,
+    #     )
+    # )
 
     class ZitadelCompose:
         def __init__(self):
@@ -472,7 +543,7 @@ def zitadel_compose(request):
             self.project: ZitadelProject = project
             self.api_app: ZitadelApiApp = api_app
             self.api_app_key: ZitadelApiAppKey = api_app_key
-            self.web_app: ZitadelWebapp = web_app
+            self.web_apps: Dict[str, ZitadelWebapp] = web_apps
             self.user: ZitadelUser = user
 
     yield ZitadelCompose()
