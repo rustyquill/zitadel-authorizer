@@ -34,13 +34,36 @@ def test_introspector_introspect_token_invalid(introspector):
     assert token.active == False
 
 
-def test_introspector_introspect_token(introspector, zitadel_tokens):
+def test_introspector_introspect_token(
+    introspector,
+    zitadel_bearer_token_no_grants,
+    zitadel_jwt_token_no_grants,
+    zitadel_bearer_token_with_grants,
+    zitadel_jwt_token_with_grants,
+):
     """introspect different tokens"""
 
-    import json
+    token: IntrospectionResponse = None
 
-    for t in zitadel_tokens:
-        access_token = t["token"].access_token
+    # no user roles should be present for a user without grants
+    token = introspector.introspect_token(zitadel_bearer_token_no_grants)
+    assert token.active == True
+    assert token.preferred_username == "integration-test-user"
+    assert token.project_roles == None
 
-        token = introspector.introspect_token(access_token)
-        print(json.dumps(token, indent=4))
+    # same should be true for jwt of the user
+    token = introspector.introspect_token(zitadel_jwt_token_no_grants)
+    assert token.active == True
+    assert token.preferred_username == "integration-test-user"
+    assert token.project_roles == None
+
+    # do the same tests with a user which has project role grants assigned
+    token = introspector.introspect_token(zitadel_bearer_token_with_grants)
+    assert token.active == True
+    assert token.preferred_username == "integration-test-user-with-roles"
+    assert token.project_roles == ["ADMIN", "USER"]
+
+    token = introspector.introspect_token(zitadel_jwt_token_with_grants)
+    assert token.active == True
+    assert token.preferred_username == "integration-test-user-with-roles"
+    assert token.project_roles == ["ADMIN", "USER"]

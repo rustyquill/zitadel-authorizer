@@ -42,6 +42,7 @@ def zitadel_instance(zitadel_compose):
     zitadel_compose.create_project_roles(project_id=project.id, roles=["ADMIN", "USER"])
 
     # the additional project is only used to assign roles to test the introspection model
+    # to ensure the POWERUSER role is not passed in the introspection response!
     additional_project = ZitadelProject(
         **zitadel_compose.create_project(name="integration-test-additional-project")
     )
@@ -69,31 +70,11 @@ def zitadel_instance(zitadel_compose):
                 access_token_type="OIDC_TOKEN_TYPE_BEARER",
             )
         ),
-        web_app_bearer_with_assertions=ZitadelWebapp(
-            **zitadel_compose.create_web_app(
-                project_id=project.id,
-                name="integration-test-web-bearer-with-assertions",
-                access_token_type="OIDC_TOKEN_TYPE_BEARER",
-                access_token_role_assertion=True,
-                id_token_role_assertion=True,
-                id_token_userinfo_assertion=True,
-            )
-        ),
-        web_app_jwt=ZitadelWebapp(
+        jwt=ZitadelWebapp(
             **zitadel_compose.create_web_app(
                 project_id=project.id,
                 name="integration-test-web-jwt",
                 access_token_type="OIDC_TOKEN_TYPE_JWT",
-            )
-        ),
-        web_app_jwt_with_assertions=ZitadelWebapp(
-            **zitadel_compose.create_web_app(
-                project_id=project.id,
-                name="integration-test-web-jwt-with-assertions",
-                access_token_type="OIDC_TOKEN_TYPE_JWT",
-                access_token_role_assertion=True,
-                id_token_role_assertion=True,
-                id_token_userinfo_assertion=True,
             )
         ),
     )
@@ -110,19 +91,10 @@ def zitadel_instance(zitadel_compose):
                 **{"password": "integration-test-password"},
             }
         ),
-        user_with_single_grant=ZitadelUser(
+        user_with_grants=ZitadelUser(
             **{
                 **zitadel_compose.create_user(
-                    username="integration-test-user-with-role",
-                    password="integration-test-password",
-                ),
-                **{"password": "integration-test-password"},
-            }
-        ),
-        user_with_two_grants=ZitadelUser(
-            **{
-                **zitadel_compose.create_user(
-                    username="integration-test-user-with-two-roles",
+                    username="integration-test-user-with-roles",
                     password="integration-test-password",
                 ),
                 **{"password": "integration-test-password"},
@@ -131,17 +103,12 @@ def zitadel_instance(zitadel_compose):
     )
     zitadel_compose.add_user_grant(
         project_id=project.id,
-        user_id=users.get("user_with_single_grant").id,
-        role_keys=["USER"],
-    )
-    zitadel_compose.add_user_grant(
-        project_id=project.id,
-        user_id=users.get("user_with_two_grants").id,
+        user_id=users.get("user_with_grants").id,
         role_keys=["ADMIN", "USER"],
     )
     zitadel_compose.add_user_grant(
         project_id=additional_project.id,
-        user_id=users.get("user_with_two_grants").id,
+        user_id=users.get("user_with_grants").id,
         role_keys=["POWERUSER"],
     )
 
@@ -193,6 +160,35 @@ def zitadel_tokens(zitadel_compose, zitadel_instance):
             tokens.append(future.result())
 
     yield tokens
+
+
+def _return_token(tokens, user, app):
+    """helper function to return the token for a specific user and web app"""
+    for token in tokens:
+        if token["user"] == user and token["web_app"] == app:
+            return token["token"].access_token
+
+
+@pytest.fixture
+def zitadel_bearer_token_no_grants(zitadel_tokens):
+
+    return _return_token(zitadel_tokens, "user_no_grants", "bearer")
+
+
+@pytest.fixture
+def zitadel_jwt_token_no_grants(zitadel_tokens):
+    return _return_token(zitadel_tokens, "user_no_grants", "jwt")
+
+
+@pytest.fixture
+def zitadel_bearer_token_with_grants(zitadel_tokens):
+
+    return _return_token(zitadel_tokens, "user_with_grants", "bearer")
+
+
+@pytest.fixture
+def zitadel_jwt_token_with_grants(zitadel_tokens):
+    return _return_token(zitadel_tokens, "user_with_grants", "jwt")
 
 
 @pytest.fixture

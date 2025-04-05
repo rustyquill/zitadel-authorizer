@@ -47,8 +47,7 @@ class ApplicationKey(BaseModel):
 # }
 # we are only interested in the role keys!
 def convert_project_roles_to_list(v: Dict[str, Dict[str, str]]) -> List[str]:
-    print(v)
-    return [role for role in v.keys()]
+    return v.keys()
 
 
 PROJECT_ROLES = Annotated[List[str], BeforeValidator(convert_project_roles_to_list)]
