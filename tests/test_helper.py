@@ -9,7 +9,7 @@ def test_get_bearer_token_from_aws_gateway_authorizer_event():
 
     event = {
         "headers": {
-            "authorization": ["Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9"],
+            "authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",
         }
     }
 

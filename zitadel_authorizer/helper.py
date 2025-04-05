@@ -18,7 +18,7 @@ def get_bearer_token_from_aws_gateway_authorizer_event(
     if not token:
         raise ValueError("No Authorization header found")
 
-    if "Bearer " not in token[0]:
+    if "Bearer " not in token:
         raise ValueError("No Authorization header found")
 
-    return token[0].replace("Bearer ", "")
+    return token.replace("Bearer ", "")
