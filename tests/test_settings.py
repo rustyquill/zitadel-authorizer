@@ -13,6 +13,6 @@ def test_introspection_settings(monkeypatch):
     monkeypatch.setenv("APPLICATION_KEY_ARN", "test_key")
 
     settings = IntrospectorSettings()
-    assert str(settings.ISSUER_URL) == "https://example.com/"
-    assert str(settings.INTROSPECTION_ENDPOINT) == "https://example.com/introspect"
+    assert settings.ISSUER_URL == "https://example.com"
+    assert settings.INTROSPECTION_ENDPOINT == "https://example.com/introspect"
     assert settings.APPLICATION_KEY_ARN == "test_key"

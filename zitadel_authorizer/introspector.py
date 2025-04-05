@@ -3,12 +3,15 @@ The introspector is used to introspect opaque tokens received from the API Gatew
 original from: https://github.com/zitadel/examples-api-access-and-token-introspection/blob/main/api-jwt/validator.py
 """
 
+from aws_lambda_powertools import Logger
 from authlib.oauth2.rfc7662 import IntrospectTokenValidator
 import requests
 import time
 import jwt
 
 from .models import ApplicationKey, IntrospectionResponse
+
+logger = Logger()
 
 
 class Introspector(IntrospectTokenValidator):
@@ -22,7 +25,7 @@ class Introspector(IntrospectTokenValidator):
         issuer_url: str,
         introspection_endpoint: str,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
@@ -63,6 +66,12 @@ class Introspector(IntrospectTokenValidator):
             client_assertion=jwt_token,
             token=token,
         )
+
+        # log the introspection request
+        logger.debug(f"Introspection endpoint: {self.introspection_endpoint}")
+        logger.debug(f"Introspection data: {data}")
+        logger.debug(f"Introspection headers: {headers}")
+        logger.debug(f"Introspection payload: {payload}")
 
         response = requests.post(
             url=self.introspection_endpoint,

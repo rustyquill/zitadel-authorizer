@@ -6,7 +6,6 @@ from typing import List, Optional, Dict
 from typing_extensions import Annotated
 from pydantic.functional_validators import BeforeValidator
 from pydantic_settings import BaseSettings
-from pydantic import AnyHttpUrl
 
 
 class IntrospectorSettings(BaseSettings):
@@ -14,8 +13,8 @@ class IntrospectorSettings(BaseSettings):
     Settings for the Introspector.
     """
 
-    ISSUER_URL: AnyHttpUrl
-    INTROSPECTION_ENDPOINT: AnyHttpUrl
+    ISSUER_URL: str
+    INTROSPECTION_ENDPOINT: str
     APPLICATION_KEY_ARN: str
 
 
