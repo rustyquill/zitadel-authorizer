@@ -16,6 +16,11 @@ def test_authorizer(
     assert authorizer.is_authorized(no_grants) is True
     assert authorizer.is_authorized(with_grants) is True
 
+    authorizer = Authorizer(required_client_id="314329296124575747")
+    assert authorizer.is_authorized(unauthenticated) is False
+    assert authorizer.is_authorized(no_grants) is False
+    assert authorizer.is_authorized(with_grants) is True
+
     authorizer = Authorizer(required_scopes=["openid", "profile", "email"])
     assert authorizer.is_authorized(unauthenticated) is False
     assert authorizer.is_authorized(no_grants) is True
