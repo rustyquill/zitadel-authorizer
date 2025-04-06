@@ -32,6 +32,7 @@ The [example](./example/) folder contains an example API Gateway Deployment with
 ### Requirements
 
 - You need an AWS account to deploy the API gateway and Lambdas
+- You need [aws cdk](https://aws.amazon.com/cdk/) installed
 - You need Postman installed to impport the [postman collection](./example/zitadel_authorizer%20-%20Example.postman_collection.json)
 - Your Zitadel instance needs to be publicly accessible.
 - Create a new project in your zitadel instance
@@ -45,8 +46,7 @@ The [example](./example/) folder contains an example API Gateway Deployment with
   - Replace the variable `zitadel_url` with the url of your zitadel instance
   - Replace the variable `client_id` with the client id of your SPA or web application.
   - You can now lease new access tokens using postman and use the token to call the API once it's deployed!
-
-First, create a new project in your zitadel instance and create a spa and api application
+- Deploy the API Gateway and lambdas using aws cdk
 
 ```bash
 cd example
@@ -59,8 +59,8 @@ cdk boostrap
 cdk deploy
 ```
 
-Once deployed get the API gateway endpoint url - open the AWS console, navigate to API Gateway -> Stages -> Default and copy the invoke url.
-Then open the postman collection and replace the variables `api_base_url` with the api gateways invoke url
+- Once deployed get the API gateway invoke url - open the AWS console, navigate to API Gateway -> Stages -> Default and copy the invoke url.
+- Open the postman collection and replace the variables `api_base_url` with the api gateways invoke url
 
 ## Weblinks
 
