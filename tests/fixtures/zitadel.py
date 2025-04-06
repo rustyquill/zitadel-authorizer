@@ -21,9 +21,7 @@ def zitadel_compose(request):
     compose.start()
 
     def teardown():
-        # TODO: enable stop after setup
-        # compose.stop()
-        pass
+        compose.stop()
 
     request.addfinalizer(teardown)
 
