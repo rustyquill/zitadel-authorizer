@@ -30,7 +30,7 @@ class ZitadelIntegration:
         return r.json()
 
     def test_connectivty(self):
-        for _ in range(5):
+        for _ in range(10):
             try:
                 self.me()
                 return
