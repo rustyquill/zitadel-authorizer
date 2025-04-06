@@ -8,61 +8,131 @@
 	},
 	"item": [
 		{
-			"name": "public",
-			"request": {
-				"auth": {
-					"type": "noauth"
+			"name": "No Auth",
+			"item": [
+				{
+					"name": "/anyone",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/public/anyone",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"public",
+								"anyone"
+							]
+						}
+					},
+					"response": []
 				},
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{api_base_url}}/public",
-					"host": [
-						"{{api_base_url}}"
-					],
-					"path": [
-						"public"
-					]
+				{
+					"name": "/authenticated",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/public/authenticated",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"public",
+								"authenticated"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/demo",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/public/demo",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"public",
+								"demo"
+							]
+						}
+					},
+					"response": []
 				}
-			},
-			"response": []
+			]
 		},
 		{
-			"name": "private - no auth",
-			"request": {
-				"auth": {
-					"type": "noauth"
+			"name": "Authenticated",
+			"item": [
+				{
+					"name": "/anyone",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/private/anyone",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"private",
+								"anyone"
+							]
+						}
+					},
+					"response": []
 				},
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{api_base_url}}/private",
-					"host": [
-						"{{api_base_url}}"
-					],
-					"path": [
-						"private"
-					]
+				{
+					"name": "/authenticated",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/private/authenticated",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"private",
+								"authenticated"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/demo",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_base_url}}/private/demo",
+							"host": [
+								"{{api_base_url}}"
+							],
+							"path": [
+								"private",
+								"demo"
+							]
+						}
+					},
+					"response": []
 				}
-			},
-			"response": []
-		},
-		{
-			"name": "private - with auth",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{api_base_url}}/private",
-					"host": [
-						"{{api_base_url}}"
-					],
-					"path": [
-						"private"
-					]
-				}
-			},
-			"response": []
+			]
 		}
 	],
 	"auth": {
