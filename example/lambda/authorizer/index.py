@@ -54,6 +54,7 @@ def handler(event: APIGatewayAuthorizerEventV2, context: LambdaContext):
 
     # initialize the authorizer
     authorizer = Authorizer(
+        required_client_id=authorizer_settings.CLIENT_ID,
         required_scopes=authorizer_settings.REQUIRED_SCOPES,
         required_roles=authorizer_settings.REQUIRED_ROLES,
     )

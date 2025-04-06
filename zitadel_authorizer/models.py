@@ -23,6 +23,7 @@ class AuthorizerSettings(BaseSettings):
     Settings for the Authorizer.
     """
 
+    CLIENT_ID: Optional[str] = None
     REQUIRED_SCOPES: List[str] = []
     REQUIRED_ROLES: List[str] = []
 
