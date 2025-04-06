@@ -79,6 +79,13 @@ class ProjectRoleAuthorizationMiddleware(BaseMiddlewareHandler):
 
         context_roles = self.get_roles_from_context(app.current_event)
 
+        if not context_roles:
+            logger.debug("No roles found in authorizer context")
+            return Response(
+                status_code=403,
+                body="Forbidden",
+            )
+
         # Check if the user has the required roles
         if not any(role in self.roles for role in context_roles):
             logger.debug("User does not have the required roles")
