@@ -1,5 +1,5 @@
 from .authorizer import Authorizer
-from .middleware import ScopeMiddleware
+from .middleware import ProjectRoleAuthorizationMiddleware
 from .introspector import Introspector
 from .models import (
     ApplicationKey,
