@@ -38,7 +38,7 @@ The [example](./example/) folder contains an example API Gateway Deployment with
 - Create an API application in the project. This app will be used by the API Gateway authorizer lambda to introspect the given user token.
   - Generate a JSON key for the API application
   - Download the key file and convert it to a base64 encoded string
-  - Save the base64 encoded string in your AWS account in the Parameter Store as a Secure String
+  - Convert the whole file to a base64 encoded string and seve it in your AWS account in the Parameter Store as a Secure String
 - Copy the [./examples/.env.example](./example/.env.example) file to [./examples/.env](./examples/.env) and replace its values
 - Create a new SPA or Web application with PKCE and `Bearer Token` as Auth Token Type
 - Import the postman collection [zitadel_authorizer - Example.postman_collection.json](./example/zitadel_authorizer%20-%20Example.postman_collection.json) into your postman.
