@@ -21,6 +21,31 @@ from aws_lambda_powertools.utilities.data_classes import APIGatewayProxyEventV2
 logger = Logger()
 
 
+class IsAuthenticatedMiddleware(BaseMiddlewareHandler):
+    """
+    Middleware to check if the user is authenticated
+    """
+
+    def handler(
+        self, app: APIGatewayHttpResolver, next_middleware: NextMiddleware
+    ) -> Response:
+        """
+        Handle the request and check if the user is authenticated
+        """
+
+        logger.debug("Checking if user is authenticated")
+
+        # Check if the user is authenticated
+        if not app.current_event.request_context.authorizer.get_context():
+            logger.debug("User is not authenticated")
+            return Response(
+                status_code=401,
+                body="Unauthorized",
+            )
+
+        return next_middleware(app)
+
+
 class ProjectRoleAuthorizationMiddleware(BaseMiddlewareHandler):
     """
     Middleware to authorize requests based on the project role(s) of the user
