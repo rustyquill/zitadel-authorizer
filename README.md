@@ -32,7 +32,7 @@ The [example](./example/) folder contains an example API Gateway Deployment with
 ### Requirements
 
 - You need an AWS account to deploy the API gateway and Lambdas
-- You need Postman installed to impport the 
+- You need Postman installed to impport the [postman collection](./example/zitadel_authorizer%20-%20Example.postman_collection.json)
 - Your Zitadel instance needs to be publicly accessible.
 - Create a new project in your zitadel instance
 - Create an API application in the project. This app will be used by the API Gateway authorizer lambda to introspect the given user token.
