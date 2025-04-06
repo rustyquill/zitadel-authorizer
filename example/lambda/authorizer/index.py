@@ -13,7 +13,6 @@ from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.utilities.data_classes import event_source
 from aws_lambda_powertools.utilities.data_classes.api_gateway_authorizer_event import (
     APIGatewayAuthorizerEventV2,
-    APIGatewayAuthorizerResponseV2,
 )
 
 logger = Logger()
@@ -59,9 +58,8 @@ def handler(event: APIGatewayAuthorizerEventV2, context: LambdaContext):
         required_roles=authorizer_settings.REQUIRED_ROLES,
     )
 
-    response = APIGatewayAuthorizerResponseV2(
-        authorize=authorizer.is_authorized(introspection_token=introspected_token),
-        context=introspected_token.model_dump(),
+    response = authorizer.return_simple_authorizer_response(
+        introspection_token=introspected_token
     )
 
     logger.info("Returning response")

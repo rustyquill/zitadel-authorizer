@@ -42,3 +42,15 @@ class Authorizer:
             return False
 
         return True
+
+    def return_simple_authorizer_response(
+        self, introspection_token: IntrospectionResponse
+    ) -> APIGatewayAuthorizerResponseV2:
+        """
+        Return a simple authorizer response
+        """
+
+        return APIGatewayAuthorizerResponseV2(
+            authorize=self.is_authorized(introspection_token=introspection_token),
+            context=introspection_token.model_dump(),
+        )
