@@ -100,8 +100,7 @@ const httpBinIntegration = new apigatewayv2_integrations.HttpUrlIntegration('Htt
 const httpLambdaAuthorizer = new apigatewayv2_authorizers.HttpLambdaAuthorizer('ZitadelAuthorizer', authorizerLambda, {
     responseTypes: [apigatewayv2_authorizers.HttpLambdaResponseType.SIMPLE],
     identitySource: ['$request.header.Authorization'],
-    // TODO: enable cache after testing
-    // resultsCacheTtl: cdk.Duration.seconds(300),
+    resultsCacheTtl: cdk.Duration.seconds(300),
 });
 const httpLambdaIntegration = new apigatewayv2_integrations.HttpLambdaIntegration('ServiceLambda', serviceLambda, {
     payloadFormatVersion: apigatewayv2.PayloadFormatVersion.VERSION_2_0,
