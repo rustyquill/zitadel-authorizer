@@ -15,7 +15,6 @@ def test_application_key_from_base64_string(api_app_key):
     assert key.clientId == "310409849496207363"
 
 
-@mock_aws
 def test_application_key_from_aws_parameter_store(ssm, api_app_key):
     from zitadel_authorizer.models import ApplicationKey
 
